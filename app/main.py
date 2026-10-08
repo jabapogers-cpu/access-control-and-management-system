@@ -6,7 +6,7 @@ from app.schemas import Employee, EmployeeCreate
 
 app = FastAPI(title="СКУД", version="0.1.0")
 
-# "База данных" недели 1: id -> сотрудник
+
 employees_db: dict[int, Employee] = {}
 next_id = 1
 
