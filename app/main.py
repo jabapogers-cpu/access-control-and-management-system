@@ -7,7 +7,13 @@ from app.models import Employee
 from app.schemas import EmployeeCreate, EmployeeRead
 from uuid import UUID
 
-app = FastAPI(title="СКУД", version="0.2.0")
+from app.schemas import Employee, EmployeeCreate
+
+app = FastAPI(title="СКУД", version="0.1.0")
+
+
+employees_db: dict[int, Employee] = {}
+next_id = 1
 
 
 @app.get("/health", tags=["service"])
