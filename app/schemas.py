@@ -1,22 +1,21 @@
 from datetime import date, datetime
-from enum import Enum
+from uuid import UUID
 
-from pydantic import BaseModel, Field
-
-
-class EmployeeStatus(str, Enum):
-    active = "active"      # доступ разрешён
-    blocked = "blocked"    # доступ заблокирован
+from sqlmodel import Field, SQLModel
 
 
-class EmployeeCreate(BaseModel):
-    full_name: str = Field(min_length=1, max_length=255, examples=["Иванов Иван Иванович"])
-    position: str = Field(min_length=1, max_length=255, examples=["Инженер"])
-    hire_date: date = Field(examples=["2026-09-01"])
+class EmployeeCreate(SQLModel):
+    full_name: str = Field(min_length=1, max_length=255)
+    position: str = Field(min_length=1, max_length=255)
+    hire_date: date
 
 
-class Employee(EmployeeCreate):
-    id: int
-    status: EmployeeStatus = EmployeeStatus.active
+class EmployeeRead(SQLModel):
+    id: UUID
+    full_name: str
+    position: str
+    status: str
+    hire_date: date
+    photo_s3_key: str | None = None
     created_at: datetime
     updated_at: datetime
