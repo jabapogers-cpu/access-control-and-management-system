@@ -1,0 +1,28 @@
+@startuml sequence_block_employee
+title Блокировка доступа сотрудника (PATCH /api/v1/employees/{id}/access)
+
+actor "Администратор" as A
+participant "Клиент\n(Swagger /docs)" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+A -> C : выбирает сотрудника, статус = blocked
+C -> API : PATCH /api/v1/employees/{id}/access\n{status: "blocked"}
+API -> API : проверка тела запроса\n(допустимы active / blocked)
+
+alt статус недопустим
+  API --> C : 422 Unprocessable Entity
+else статус допустим
+  API -> DB : SELECT сотрудника по id
+  alt сотрудник не найден
+    DB --> API : пусто
+    API --> C : 404 Not Found
+  else сотрудник найден
+    DB --> API : сотрудник
+    API -> DB : UPDATE employees\nSET status, updated_at
+    DB --> API : OK
+    API --> C : 200 OK\n{id, name, status: "blocked", ...}
+  end
+end
+C --> A : показывает новый статус
+@enduml

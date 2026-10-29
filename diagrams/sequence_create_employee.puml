@@ -1,0 +1,21 @@
+@startuml sequence_create_employee
+title Создание сотрудника (POST /api/v1/employees)
+
+actor "Администратор" as A
+participant "Клиент\n(Swagger /docs)" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+A -> C : вводит name, position, hire_date
+C -> API : POST /api/v1/employees\n{name, position, hire_date}
+API -> API : проверка данных (Pydantic)
+
+alt данные некорректны
+  API --> C : 422 Unprocessable Entity
+else данные корректны
+  API -> DB : INSERT INTO employees
+  DB --> API : id, created_at, updated_at
+  API --> C : 201 Created\n{id, name, position, status, ...}
+end
+C --> A : показывает результат
+@enduml

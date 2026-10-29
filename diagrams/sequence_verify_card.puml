@@ -1,0 +1,27 @@
+@startuml sequence_verify_card
+title Проверка доступа по RFID-карте (POST /api/v1/access/verify) — план
+
+actor "Сотрудник" as U
+participant "Турникет\n(контроллер)" as T
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+U -> T : прикладывает карту
+T -> API : POST /api/v1/access/verify\n{card_uid, device_id}
+API -> DB : найти точку доступа по device_id
+API -> DB : найти карту по card_uid\n(вместе с сотрудником)
+DB --> API : карта и сотрудник (или ничего)
+
+alt карта не найдена
+  API -> DB : INSERT access_logs (result = denied, причина: неизвестная карта)
+  API --> T : {allowed: false}
+else карта или сотрудник заблокированы
+  API -> DB : INSERT access_logs (result = denied, причина: доступ заблокирован)
+  API --> T : {allowed: false}
+else доступ разрешён
+  API -> DB : INSERT access_logs (result = granted)
+  API --> T : {allowed: true}
+  T -> T : включить реле (открыть замок)
+  T --> U : проход открыт
+end
+@enduml

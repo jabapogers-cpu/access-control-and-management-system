@@ -1,0 +1,99 @@
+@startuml er_diagram
+title ER-диаграмма СКУД (нотация IE)
+hide circle
+skinparam linetype ortho
+
+' Типы колонок ориентировочные: сверь с результатом python check_db.py
+
+entity "roles" as roles {
+  *id : int <<PK>>
+  --
+  *name : varchar
+}
+
+entity "users" as users {
+  *id : int <<PK>>
+  --
+  *username : varchar
+  *password_hash : varchar
+  *role_id : int <<FK>>
+  employee_id : int <<FK>>
+}
+
+entity "refresh_tokens" as refresh_tokens {
+  *id : int <<PK>>
+  --
+  *user_id : int <<FK>>
+  *token_hash : varchar
+  *expires_at : timestamp
+  revoked_at : timestamp
+  *created_at : timestamp
+}
+
+entity "employees" as employees {
+  *id : int <<PK>>
+  --
+  *name : varchar
+  *position : varchar
+  *status : varchar
+  *hire_date : date
+  photo_s3_key : varchar
+  *created_at : timestamp
+  *updated_at : timestamp
+}
+
+entity "rfid_cards" as rfid_cards {
+  *id : int <<PK>>
+  --
+  *employee_id : int <<FK>>
+  *card_uid : varchar <<UNIQUE>>
+  *status : varchar
+  *issued_at : timestamp
+}
+
+entity "face_embeddings" as face_embeddings {
+  *id : int <<PK>>
+  --
+  *employee_id : int <<FK>>
+  *embedding_encrypted : bytea
+  *model_version : varchar
+  *created_at : timestamp
+}
+
+entity "access_points" as access_points {
+  *id : int <<PK>>
+  --
+  *name : varchar
+  location : varchar
+}
+
+entity "devices" as devices {
+  *id : int <<PK>>
+  --
+  *access_point_id : int <<FK>>
+  *device_type : varchar
+  *api_key_hash : varchar
+  last_seen_at : timestamp
+  *status : varchar
+}
+
+entity "access_logs" as access_logs {
+  *id : int <<PK>>
+  --
+  employee_id : int <<FK>>
+  *access_point_id : int <<FK>>
+  *method : varchar
+  *result : varchar
+  score : float
+  *occurred_at : timestamp
+}
+
+roles ||--o{ users
+users ||--o{ refresh_tokens
+employees |o--o| users
+employees ||--o{ rfid_cards
+employees ||--o{ face_embeddings
+employees |o--o{ access_logs
+access_points ||--o{ devices
+access_points ||--o{ access_logs
+@enduml
