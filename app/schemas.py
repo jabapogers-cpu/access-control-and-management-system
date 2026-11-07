@@ -1,10 +1,11 @@
+"""Схемы: какие данные API принимает и что возвращает"""
 import uuid
 from datetime import date, datetime
 from typing import Literal
 
 from sqlmodel import Field, SQLModel
 
-
+# Допустимые значения
 AccessStatus = Literal["active", "blocked"]
 AccessResult = Literal["granted", "denied"]
 AccessMethod = Literal["card", "face"]
@@ -56,7 +57,7 @@ class CardRead(SQLModel):
     issued_at: datetime
 
 
-# турникеты и устройства
+# точки доступа и устройства
 class AccessPointCreate(SQLModel):
     name: str = Field(min_length=1, max_length=255)
     location: str | None = Field(default=None, max_length=255)
@@ -78,7 +79,7 @@ class DeviceCreated(SQLModel):
     access_point_id: uuid.UUID
     device_type: str
     status: str
-    api_key: str
+    api_key: str  # показываем только один раз, в базе лежит хэш
 
 
 # проверка доступа
@@ -89,7 +90,7 @@ class VerifyRequest(SQLModel):
 
 class VerifyResponse(SQLModel):
     allowed: bool
-    reason: str
+    reason: str  # ok, unknown_card, card_blocked, employee_blocked
     employee_id: uuid.UUID | None = None
 
 
@@ -109,3 +110,30 @@ class EventPage(SQLModel):
     total: int
     limit: int
     offset: int
+
+
+# авторизация
+class LoginRequest(SQLModel):
+    username: str
+    password: str
+
+
+class TokenResponse(SQLModel):
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+
+
+class RefreshRequest(SQLModel):
+    refresh_token: str
+
+
+class AccessTokenResponse(SQLModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class MeResponse(SQLModel):
+    id: uuid.UUID
+    username: str
+    role: str

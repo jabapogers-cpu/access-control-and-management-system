@@ -1,0 +1,31 @@
+@startuml sequence_bind_card
+title Привязка RFID-карты к сотруднику (POST /api/v1/employees/{id}/cards)
+
+actor "Администратор" as A
+participant "Клиент\n(Swagger /docs)" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+A -> C : вводит UID карты
+C -> API : POST /api/v1/employees/{id}/cards\n{card_uid}
+API -> API : проверка и нормализация UID\n(пробелы, верхний регистр)
+
+alt UID пустой
+  API --> C : 422 Unprocessable Entity
+else UID корректный
+  API -> DB : SELECT сотрудник по id
+  alt сотрудник не найден
+    API --> C : 404 Not Found
+  else сотрудник найден
+    API -> DB : SELECT карта по card_uid
+    alt карта уже привязана
+      API --> C : 409 Conflict
+    else карта свободна
+      API -> DB : INSERT INTO rfid_cards
+      DB --> API : OK
+      API --> C : 201 Created\n{id, card_uid, status: active, ...}
+    end
+  end
+end
+C --> A : показывает результат
+@enduml

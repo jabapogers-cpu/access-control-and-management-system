@@ -1,5 +1,5 @@
 @startuml sequence_verify_card
-title Проверка доступа по RFID-карте (POST /api/v1/access/verify) — план
+title Проверка доступа по RFID-карте (POST /api/v1/access/verify)
 
 actor "Сотрудник" as U
 participant "Турникет\n(контроллер)" as T
@@ -7,21 +7,36 @@ participant "API\n(FastAPI)" as API
 database "PostgreSQL" as DB
 
 U -> T : прикладывает карту
-T -> API : POST /api/v1/access/verify\n{card_uid, device_id}
-API -> DB : найти точку доступа по device_id
-API -> DB : найти карту по card_uid\n(вместе с сотрудником)
-DB --> API : карта и сотрудник (или ничего)
+T -> API : POST /api/v1/access/verify\n{card_uid, device_id}\nX-Device-Key: <ключ>
+API -> DB : SELECT устройство по device_id
 
-alt карта не найдена
-  API -> DB : INSERT access_logs (result = denied, причина: неизвестная карта)
-  API --> T : {allowed: false}
-else карта или сотрудник заблокированы
-  API -> DB : INSERT access_logs (result = denied, причина: доступ заблокирован)
-  API --> T : {allowed: false}
-else доступ разрешён
-  API -> DB : INSERT access_logs (result = granted)
-  API --> T : {allowed: true}
-  T -> T : включить реле (открыть замок)
-  T --> U : проход открыт
+alt устройство не найдено
+  API --> T : 404 Not Found
+else устройство найдено
+  API -> API : сравнить хэш ключа с api_key_hash
+
+  alt ключ не передан или неверный
+    API --> T : 401 Unauthorized
+  else ключ верный
+    API -> DB : SELECT карта по card_uid
+    API -> DB : SELECT сотрудник карты
+    DB --> API : карта и сотрудник (или ничего)
+
+    alt карта не найдена
+      API -> DB : INSERT access_logs (result = denied)
+      API --> T : 200 {allowed: false, reason: unknown_card}
+    else карта заблокирована
+      API -> DB : INSERT access_logs (result = denied)
+      API --> T : 200 {allowed: false, reason: card_blocked}
+    else сотрудник заблокирован
+      API -> DB : INSERT access_logs (result = denied)
+      API --> T : 200 {allowed: false, reason: employee_blocked}
+    else доступ разрешён
+      API -> DB : INSERT access_logs (result = granted)
+      API --> T : 200 {allowed: true, reason: ok}
+      T -> T : включить реле (открыть замок)
+      T --> U : проход открыт
+    end
+  end
 end
 @enduml

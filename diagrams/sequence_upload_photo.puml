@@ -1,0 +1,39 @@
+@startuml sequence_upload_photo
+title Загрузка фото сотрудника (POST /api/v1/employees/{id}/photo)
+
+actor "Администратор" as A
+participant "Клиент\n(Swagger /docs)" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+participant "Хранилище\n(MinIO / S3)" as S3
+
+A -> C : выбирает файл с фото
+C -> API : POST /api/v1/employees/{id}/photo\n(multipart, Authorization: Bearer ...)
+API -> API : проверить токен и роль (admin)
+API -> DB : SELECT сотрудник по id
+
+alt сотрудник не найден
+  API --> C : 404 Not Found
+else сотрудник найден
+  API -> API : проверить размер (до 5 МБ)\nи тип файла (jpg или png)
+
+  alt файл слишком большой
+    API --> C : 413 Payload Too Large
+  else файл не jpg и не png
+    API --> C : 422 Unprocessable Entity
+  else файл подходит
+    API -> S3 : PUT employees/{id}/{случайное имя}.jpg
+
+    alt хранилище не отвечает
+      API --> C : 503 Service Unavailable
+    else файл сохранён
+      API -> DB : UPDATE employees\nSET photo_s3_key, updated_at
+      opt было старое фото
+        API -> S3 : DELETE старый файл
+      end
+      API --> C : 200 {id, name, photo_s3_key, ...}
+    end
+  end
+end
+C --> A : показывает результат
+@enduml

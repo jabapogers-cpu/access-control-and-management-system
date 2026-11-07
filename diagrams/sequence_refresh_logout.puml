@@ -1,0 +1,25 @@
+@startuml sequence_refresh_logout
+title Обновление токена и выход
+
+participant "Клиент" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+== Обновление access-токена ==
+C -> API : POST /api/v1/auth/refresh\n{refresh_token}
+API -> DB : SELECT токен по хэшу
+DB --> API : запись о токене (или ничего)
+
+alt токена нет, он отозван или просрочен
+  API --> C : 401 Unauthorized
+else токен действителен
+  API -> API : создать новый access-токен
+  API --> C : 200 {access_token}
+end
+
+== Выход ==
+C -> API : POST /api/v1/auth/logout\n{refresh_token}
+API -> DB : UPDATE refresh_tokens\nSET revoked_at = сейчас
+API --> C : 200 {status: ok}
+note right of C : после выхода refresh-токен\nбольше не работает
+@enduml

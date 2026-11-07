@@ -1,4 +1,4 @@
-"""Эндпоинты для работы с сотрудниками"""
+"""Эндпоинты для работы с сотрудниками."""
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -6,6 +6,7 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.db import get_session
+from app.deps import admin_only, admin_or_security
 from app.models import Employee, now
 from app.schemas import (
     AccessStatus,
@@ -18,9 +19,9 @@ from app.schemas import (
 router = APIRouter(prefix="/api/v1/employees", tags=["employees"])
 
 
-@router.post("", response_model=EmployeeRead, status_code=201)
+@router.post("", response_model=EmployeeRead, status_code=201, dependencies=[admin_only])
 def create_employee(data: EmployeeCreate, session: Session = Depends(get_session)) -> Employee:
-    """Создает нового сотрудника"""
+    """Создаёт нового сотрудника."""
     employee = Employee(**data.model_dump())
     session.add(employee)
     session.commit()
@@ -28,7 +29,7 @@ def create_employee(data: EmployeeCreate, session: Session = Depends(get_session
     return employee
 
 
-@router.get("", response_model=EmployeePage)
+@router.get("", response_model=EmployeePage, dependencies=[admin_or_security])
 def list_employees(
     name: str | None = None,
     position: str | None = None,
@@ -37,7 +38,7 @@ def list_employees(
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
 ) -> EmployeePage:
-    """Возвращает список сотрудников"""
+    """Возвращает список сотрудников с фильтрами и постраничным выводом."""
     filters = []
     if name:
         filters.append(col(Employee.name).ilike(f"%{name}%"))
@@ -46,10 +47,10 @@ def list_employees(
     if status:
         filters.append(Employee.status == status)
 
-
+    # сколько всего сотрудников подходит под фильтры
     total = session.exec(select(func.count()).select_from(Employee).where(*filters)).one()
 
-
+    # одна страница сотрудников
     items = session.exec(
         select(Employee)
         .where(*filters)
@@ -60,22 +61,22 @@ def list_employees(
     return EmployeePage(items=items, total=total, limit=limit, offset=offset)
 
 
-@router.get("/{employee_id}", response_model=EmployeeRead)
+@router.get("/{employee_id}", response_model=EmployeeRead, dependencies=[admin_or_security])
 def get_employee(employee_id: uuid.UUID, session: Session = Depends(get_session)) -> Employee:
-    """Возвращает одного сотрудника"""
+    """Возвращает одного сотрудника по id."""
     employee = session.get(Employee, employee_id)
     if employee is None:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")
     return employee
 
 
-@router.patch("/{employee_id}/access", response_model=EmployeeRead)
+@router.patch("/{employee_id}/access", response_model=EmployeeRead, dependencies=[admin_only])
 def update_access(
     employee_id: uuid.UUID,
     data: EmployeeAccessUpdate,
     session: Session = Depends(get_session),
 ) -> Employee:
-    """Блокирует или разблокирует сотрудника"""
+    """Блокирует или разблокирует сотрудника."""
     employee = session.get(Employee, employee_id)
     if employee is None:
         raise HTTPException(status_code=404, detail="Сотрудник не найден")

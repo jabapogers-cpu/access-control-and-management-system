@@ -1,3 +1,4 @@
+"""Модели таблиц"""
 import uuid
 from datetime import date, datetime, timezone
 
@@ -24,7 +25,7 @@ class Employee(SQLModel, table=True):
 
 
 class RfidCard(SQLModel, table=True):
-    """таблица RFID-карт."""
+    """Таблица RFID-карт"""
     __tablename__ = "rfid_cards"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -35,7 +36,7 @@ class RfidCard(SQLModel, table=True):
 
 
 class AccessPoint(SQLModel, table=True):
-    """таблица турникетов"""
+    """Таблица точек доступа"""
     __tablename__ = "access_points"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -44,7 +45,7 @@ class AccessPoint(SQLModel, table=True):
 
 
 class Device(SQLModel, table=True):
-    """таблица устройств пропуска"""
+    """Таблица устройств"""
     __tablename__ = "devices"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -56,7 +57,7 @@ class Device(SQLModel, table=True):
 
 
 class AccessLog(SQLModel, table=True):
-    """журнал проходов"""
+    """Таблица журнала проходов"""
     __tablename__ = "access_logs"
 
     id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
@@ -66,3 +67,34 @@ class AccessLog(SQLModel, table=True):
     result: str   # granted или denied
     score: float | None = None
     occurred_at: datetime = Field(default_factory=now)
+
+
+class Role(SQLModel, table=True):
+    """Таблица ролей"""
+    __tablename__ = "roles"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    name: str = Field(unique=True)
+
+
+class User(SQLModel, table=True):
+    """Таблица учетных записей для входа в систему"""
+    __tablename__ = "users"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    username: str = Field(unique=True)
+    password_hash: str
+    role_id: uuid.UUID = Field(foreign_key="roles.id")
+    employee_id: uuid.UUID | None = Field(default=None, foreign_key="employees.id")
+
+
+class RefreshToken(SQLModel, table=True):
+    """Таблица refresh-токенов"""
+    __tablename__ = "refresh_tokens"
+
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    user_id: uuid.UUID = Field(foreign_key="users.id")
+    token_hash: str
+    expires_at: datetime
+    revoked_at: datetime | None = None
+    created_at: datetime = Field(default_factory=now)

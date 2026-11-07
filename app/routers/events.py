@@ -1,4 +1,4 @@
-"""Журнал входов"""
+"""Журнал проходов."""
 import uuid
 from datetime import datetime
 
@@ -7,13 +7,14 @@ from sqlalchemy import func
 from sqlmodel import Session, col, select
 
 from app.db import get_session
+from app.deps import admin_or_security
 from app.models import AccessLog
 from app.schemas import AccessMethod, AccessResult, EventPage
 
 router = APIRouter(prefix="/api/v1/events", tags=["events"])
 
 
-@router.get("", response_model=EventPage)
+@router.get("", response_model=EventPage, dependencies=[admin_or_security])
 def list_events(
     employee_id: uuid.UUID | None = None,
     access_point_id: uuid.UUID | None = None,
@@ -25,7 +26,7 @@ def list_events(
     offset: int = Query(0, ge=0),
     session: Session = Depends(get_session),
 ) -> EventPage:
-    """Возвращает журнал"""
+    """Возвращает журнал проходов с фильтрами (новые события сверху)."""
     filters = []
     if employee_id:
         filters.append(AccessLog.employee_id == employee_id)
