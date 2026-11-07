@@ -1,0 +1,29 @@
+@startuml sequence_protected_request
+title Запрос к защищённому эндпоинту (проверка токена и роли)
+
+actor "Пользователь" as U
+participant "Клиент" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+U -> C : открывает список сотрудников
+C -> API : GET /api/v1/employees\nAuthorization: Bearer <access_token>
+API -> API : проверить подпись и срок токена
+
+alt токена нет или он недействителен
+  API --> C : 401 Unauthorized
+else токен действителен
+  API -> DB : SELECT пользователь по id из токена
+  API -> DB : SELECT роль пользователя
+  DB --> API : пользователь и роль
+
+  alt роль не подходит (нужна admin или security)
+    API --> C : 403 Forbidden
+  else роль подходит
+    API -> DB : SELECT сотрудники
+    DB --> API : список
+    API --> C : 200 {items, total, ...}
+  end
+end
+C --> U : показывает результат
+@enduml

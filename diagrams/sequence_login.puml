@@ -1,0 +1,24 @@
+@startuml sequence_login
+title Вход в систему (POST /api/v1/auth/login)
+
+actor "Пользователь" as U
+participant "Клиент\n(Swagger /docs)" as C
+participant "API\n(FastAPI)" as API
+database "PostgreSQL" as DB
+
+U -> C : вводит логин и пароль
+C -> API : POST /api/v1/auth/login\n{username, password}
+API -> DB : SELECT пользователь по username
+DB --> API : пользователь (или ничего)
+API -> API : сравнить пароль с хэшем (bcrypt)
+
+alt пользователь не найден или пароль неверный
+  API --> C : 401 Unauthorized
+else данные верные
+  API -> API : создать access-токен (JWT, 15 минут)
+  API -> API : создать случайный refresh-токен
+  API -> DB : INSERT INTO refresh_tokens\n(хэш токена, срок 7 дней)
+  API --> C : 200 {access_token, refresh_token}
+end
+C --> U : показывает результат
+@enduml
