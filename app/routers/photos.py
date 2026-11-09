@@ -34,12 +34,10 @@ def upload_photo(
     """Загружает фото сотрудника в хранилище (jpg или png, до 5 МБ)"""
     employee = get_employee_or_404(session, employee_id)
 
-    # читаем на один байт больше лимита, чтобы понять, что файл слишком большой
     data = photo.file.read(MAX_PHOTO_BYTES + 1)
     if len(data) > MAX_PHOTO_BYTES:
         raise HTTPException(status_code=413, detail="Файл больше 5 МБ")
 
-    # тип определяем по самому файлу, а не по имени
     image_type = detect_image_type(data)
     if image_type is None:
         raise HTTPException(status_code=422, detail="Нужна картинка в формате jpg или png")
@@ -57,13 +55,11 @@ def upload_photo(
     session.commit()
     session.refresh(employee)
 
-    # старое фото удаляем уже после сохранения нового
     if old_key:
         try:
             storage.delete(old_key)
         except Exception:
-            pass  # если не получилось удалить, ничего страшного
-
+            pass
     return employee
 
 
@@ -73,7 +69,7 @@ def get_photo(
     session: Session = Depends(get_session),
     storage: PhotoStorage = Depends(get_storage),
 ) -> Response:
-    """Отдаёт фото сотрудника (только для админа и сотрудника безопасности)"""
+    """Отдаёт фото сотрудника"""
     employee = get_employee_or_404(session, employee_id)
     if employee.photo_s3_key is None:
         raise HTTPException(status_code=404, detail="Фото не загружено")
